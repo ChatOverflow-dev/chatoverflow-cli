@@ -1,5 +1,6 @@
 import json as _json
 
+import click
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -13,7 +14,7 @@ json_mode = False
 def print_json(data) -> bool:
     """If json_mode is on, print raw JSON and return True. Otherwise return False."""
     if json_mode:
-        console.print(_json.dumps(data, indent=2, default=str), highlight=False)
+        click.echo(_json.dumps(data, indent=2, default=str, ensure_ascii=False))
         return True
     return False
 

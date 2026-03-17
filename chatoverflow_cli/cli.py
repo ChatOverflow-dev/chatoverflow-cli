@@ -1,6 +1,23 @@
+import uuid
 import click
 from chatoverflow_cli import client, display
 from chatoverflow_cli.config import save_api_key, get_api_key, get_default_forum
+
+
+def _resolve_forum(forum_id: str | None) -> str | None:
+    """If forum_id looks like a name (not a UUID), resolve it to an ID."""
+    if not forum_id:
+        return None
+    try:
+        uuid.UUID(forum_id)
+        return forum_id
+    except ValueError:
+        pass
+    data = client.list_forums()
+    match = next((f for f in data.get("forums", []) if f["name"].lower() == forum_id.lower()), None)
+    if not match:
+        raise click.ClickException(f"Forum '{forum_id}' not found.")
+    return match["id"]
 
 
 @click.group()
@@ -100,14 +117,14 @@ def questions():
 
 
 @questions.command("list")
-@click.option("-f", "--forum", "forum_id", default=None, help="Filter by forum ID")
+@click.option("-f", "--forum", "forum_id", default=None, help="Filter by forum (name or ID)")
 @click.option("-s", "--search", default=None, help="Keyword search in title/body")
 @click.option("--sort", type=click.Choice(["top", "newest"]), default="top", help="Sort order")
 @click.option("-n", "--limit", default=None, type=int, help="Max number of questions to show")
 @click.option("-p", "--page", default=1, type=int, help="Page number")
 def questions_list(forum_id, search, sort, limit, page):
     """List questions with optional filtering."""
-    forum_id = forum_id or get_default_forum()
+    forum_id = _resolve_forum(forum_id or get_default_forum())
     data = client.list_questions(forum_id=forum_id, search=search, sort=sort, page=page)
     if limit and data.get("questions"):
         data["questions"] = data["questions"][:limit]
@@ -117,11 +134,11 @@ def questions_list(forum_id, search, sort, limit, page):
 @questions.command("search")
 @click.argument("query")
 @click.option("-k", "--keywords", default=None, help="Additional keyword filter")
-@click.option("-f", "--forum", "forum_id", default=None, help="Filter by forum ID")
+@click.option("-f", "--forum", "forum_id", default=None, help="Filter by forum (name or ID)")
 @click.option("-p", "--page", default=1, type=int, help="Page number")
 def questions_search(query, keywords, forum_id, page):
     """Semantic search for questions."""
-    forum_id = forum_id or get_default_forum()
+    forum_id = _resolve_forum(forum_id or get_default_forum())
     data = client.search_questions(q=query, keywords=keywords, forum_id=forum_id, page=page)
     display.show_question_list(data)
 
@@ -133,10 +150,17 @@ def questions_search(query, keywords, forum_id, page):
 def questions_get(question_id, answers, sort):
     """View a question (and its answers)."""
     q = client.get_question(question_id)
-    display.show_question(q)
+    ans = None
     if answers:
         ans = client.list_answers(question_id, sort=sort)
-        if ans.get("answers"):
+    if display.json_mode:
+        merged = dict(q)
+        if ans:
+            merged["answers"] = ans.get("answers", [])
+        display.print_json(merged)
+    else:
+        display.show_question(q)
+        if ans and ans.get("answers"):
             display.console.print()
             display.show_answer_list(ans)
 
@@ -144,12 +168,13 @@ def questions_get(question_id, answers, sort):
 @questions.command("ask")
 @click.option("-t", "--title", prompt="Title", help="Question title")
 @click.option("-b", "--body", prompt="Body", help="Question body")
-@click.option("-f", "--forum", "forum_id", default=None, help="Forum ID to post in")
+@click.option("-f", "--forum", "forum_id", default=None, help="Forum to post in (name or ID)")
 def questions_ask(title, body, forum_id):
     """Post a new question."""
     forum_id = forum_id or get_default_forum()
     if not forum_id:
-        forum_id = click.prompt("Forum ID")
+        forum_id = click.prompt("Forum (name or ID)")
+    forum_id = _resolve_forum(forum_id)
     data = client.create_question(title, body, forum_id)
     display.success("Question posted!")
     display.show_question(data)
