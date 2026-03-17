@@ -38,3 +38,24 @@ def save_api_url(api_url: str) -> None:
     data = _load()
     data["api_url"] = api_url
     _save(data)
+
+
+def get_default_forum() -> str | None:
+    """Check .chatoverflow.yaml in cwd, then global config for a default forum."""
+    # Project-level config
+    local = Path(".chatoverflow.yaml")
+    if local.exists():
+        try:
+            import yaml
+            return yaml.safe_load(local.read_text()).get("forum")
+        except Exception:
+            pass
+        # Fall back to simple key: value parsing if no yaml module
+        try:
+            for line in local.read_text().splitlines():
+                if line.startswith("forum:"):
+                    return line.split(":", 1)[1].strip().strip('"').strip("'")
+        except Exception:
+            pass
+    # Global config
+    return _load().get("default_forum")

@@ -1,13 +1,14 @@
 import click
 from chatoverflow_cli import client, display
-from chatoverflow_cli.config import save_api_key, get_api_key
+from chatoverflow_cli.config import save_api_key, get_api_key, get_default_forum
 
 
 @click.group()
 @click.version_option(version="0.1.0")
-def cli():
+@click.option("--json", "use_json", is_flag=True, default=False, help="Output raw JSON instead of tables")
+def cli(use_json):
     """ChatOverflow CLI - Q&A forum for developers and AI agents."""
-    pass
+    display.json_mode = use_json
 
 
 # ══════════════════════════════════════════
@@ -106,6 +107,7 @@ def questions():
 @click.option("-p", "--page", default=1, type=int, help="Page number")
 def questions_list(forum_id, search, sort, limit, page):
     """List questions with optional filtering."""
+    forum_id = forum_id or get_default_forum()
     data = client.list_questions(forum_id=forum_id, search=search, sort=sort, page=page)
     if limit and data.get("questions"):
         data["questions"] = data["questions"][:limit]
@@ -119,6 +121,7 @@ def questions_list(forum_id, search, sort, limit, page):
 @click.option("-p", "--page", default=1, type=int, help="Page number")
 def questions_search(query, keywords, forum_id, page):
     """Semantic search for questions."""
+    forum_id = forum_id or get_default_forum()
     data = client.search_questions(q=query, keywords=keywords, forum_id=forum_id, page=page)
     display.show_question_list(data)
 
@@ -141,9 +144,12 @@ def questions_get(question_id, answers, sort):
 @questions.command("ask")
 @click.option("-t", "--title", prompt="Title", help="Question title")
 @click.option("-b", "--body", prompt="Body", help="Question body")
-@click.option("-f", "--forum", "forum_id", prompt="Forum ID", help="Forum ID to post in")
+@click.option("-f", "--forum", "forum_id", default=None, help="Forum ID to post in")
 def questions_ask(title, body, forum_id):
     """Post a new question."""
+    forum_id = forum_id or get_default_forum()
+    if not forum_id:
+        forum_id = click.prompt("Forum ID")
     data = client.create_question(title, body, forum_id)
     display.success("Question posted!")
     display.show_question(data)

@@ -1,3 +1,5 @@
+import json as _json
+
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -5,6 +7,15 @@ from rich.text import Text
 from rich.markdown import Markdown
 
 console = Console()
+json_mode = False
+
+
+def print_json(data) -> bool:
+    """If json_mode is on, print raw JSON and return True. Otherwise return False."""
+    if json_mode:
+        console.print(_json.dumps(data, indent=2, default=str), highlight=False)
+        return True
+    return False
 
 HUMAN_URL = "https://www.chatoverflow.dev/humans/question"
 
@@ -26,6 +37,8 @@ def _truncate(text: str, length: int = 80) -> str:
 # ── Users ──
 
 def show_user(u: dict) -> None:
+    if print_json(u):
+        return
     table = Table(show_header=False, box=None, padding=(0, 2))
     table.add_column(style="bold cyan")
     table.add_column()
@@ -39,6 +52,8 @@ def show_user(u: dict) -> None:
 
 
 def show_user_list(users: list) -> None:
+    if print_json(users):
+        return
     table = Table(title="Top Users")
     table.add_column("#", style="dim", width=4)
     table.add_column("Username", style="cyan")
@@ -53,6 +68,8 @@ def show_user_list(users: list) -> None:
 # ── Forums ──
 
 def show_forum(f: dict) -> None:
+    if print_json(f):
+        return
     table = Table(show_header=False, box=None, padding=(0, 2))
     table.add_column(style="bold cyan")
     table.add_column()
@@ -67,6 +84,8 @@ def show_forum(f: dict) -> None:
 
 
 def show_forum_list(data: dict) -> None:
+    if print_json(data):
+        return
     forums = data.get("forums", data) if isinstance(data, dict) else data
     table = Table(title="Forums")
     table.add_column("Name", style="cyan", min_width=20)
@@ -82,6 +101,8 @@ def show_forum_list(data: dict) -> None:
 # ── Questions ──
 
 def show_question(q: dict) -> None:
+    if print_json(q):
+        return
     score = _score_text(q["score"])
     header = Text()
     header.append(f"[{q['forum_name']}] ", style="magenta")
@@ -92,17 +113,19 @@ def show_question(q: dict) -> None:
 
 
 def show_question_list(data: dict) -> None:
+    if print_json(data):
+        return
     questions = data.get("questions", [])
     if not questions:
         console.print("No questions found.", style="dim")
         return
-    table = Table()
+    table = Table(show_lines=False)
     table.add_column("Score", justify="right", width=6)
-    table.add_column("A", justify="right", width=4)
-    table.add_column("Title", min_width=30)
-    table.add_column("Forum", style="magenta", width=15)
-    table.add_column("Author", style="cyan", width=15)
-    table.add_column("ID", style="dim")
+    table.add_column("A", justify="right", width=3)
+    table.add_column("Title", min_width=30, ratio=2)
+    table.add_column("Forum", style="magenta", max_width=18)
+    table.add_column("Author", style="cyan", max_width=16)
+    table.add_column("ID", style="dim", min_width=36, no_wrap=True)
     for q in questions:
         table.add_row(
             _score_text(q["score"]),
@@ -110,7 +133,7 @@ def show_question_list(data: dict) -> None:
             _truncate(q["title"], 60),
             q["forum_name"],
             q["author_username"],
-            q["id"][:8] + "\u2026",
+            q["id"],
         )
     console.print(table)
     if data.get("total_pages", 1) > 1:
@@ -120,6 +143,8 @@ def show_question_list(data: dict) -> None:
 # ── Answers ──
 
 def show_answer(a: dict) -> None:
+    if print_json(a):
+        return
     score = _score_text(a["score"])
     status_style = {"success": "green", "attempt": "yellow", "failure": "red"}.get(a.get("status", ""), "")
     status = f"[{status_style}]{a.get('status', '')}[/{status_style}]" if a.get("status") else ""
@@ -128,6 +153,8 @@ def show_answer(a: dict) -> None:
 
 
 def show_answer_list(data: dict) -> None:
+    if print_json(data):
+        return
     answers = data.get("answers", [])
     if not answers:
         console.print("No answers yet.", style="dim")
