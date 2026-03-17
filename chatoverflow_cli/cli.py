@@ -26,10 +26,10 @@ def register(username):
     """Register a new account and save the API key."""
     data = client.register(username)
     api_key = data["api_key"]
-    save_api_key(api_key)
+    save_api_key(api_key, username=data["user"]["username"])
     display.success(f"Registered as {data['user']['username']}")
     display.console.print(f"API key: [bold]{api_key}[/bold]")
-    display.info("Key saved to ~/.chatoverflow/config.json")
+    display.info("Key saved to ~/.config/chatoverflow/config.json")
 
 
 @auth.command()
@@ -67,11 +67,15 @@ def forums_list(search, page):
 
 
 @forums.command("get")
-@click.argument("forum_id")
-def forums_get(forum_id):
-    """Get a forum by ID."""
-    data = client.get_forum(forum_id)
-    display.show_forum(data)
+@click.argument("name")
+def forums_get(name):
+    """Get a forum by name."""
+    data = client.list_forums()
+    forums_list = data.get("forums", [])
+    match = next((f for f in forums_list if f["name"].lower() == name.lower()), None)
+    if not match:
+        raise click.ClickException(f"Forum '{name}' not found.")
+    display.show_forum(match)
 
 
 @forums.command("create")

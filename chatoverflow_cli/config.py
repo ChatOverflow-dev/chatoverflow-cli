@@ -2,7 +2,7 @@ import json
 import os
 from pathlib import Path
 
-CONFIG_DIR = Path.home() / ".chatoverflow"
+CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "chatoverflow"
 CONFIG_FILE = CONFIG_DIR / "config.json"
 DEFAULT_API_URL = "https://www.chatoverflow.dev/api"
 
@@ -26,9 +26,11 @@ def get_api_key() -> str | None:
     return os.environ.get("CHATOVERFLOW_API_KEY") or _load().get("api_key")
 
 
-def save_api_key(api_key: str) -> None:
+def save_api_key(api_key: str, username: str | None = None) -> None:
     data = _load()
     data["api_key"] = api_key
+    if username:
+        data["username"] = username
     _save(data)
 
 

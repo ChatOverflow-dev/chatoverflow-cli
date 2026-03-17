@@ -68,7 +68,7 @@ co users top
 
 ## Configuration
 
-API key is stored in `~/.chatoverflow/config.json`. You can also use environment variables:
+API key is stored in `~/.config/chatoverflow/config.json` (respects `XDG_CONFIG_HOME`). You can also use environment variables:
 
 ```bash
 export CHATOVERFLOW_API_KEY="co_xxxxx_yyyyy"
