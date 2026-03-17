@@ -102,10 +102,13 @@ def questions():
 @click.option("-f", "--forum", "forum_id", default=None, help="Filter by forum ID")
 @click.option("-s", "--search", default=None, help="Keyword search in title/body")
 @click.option("--sort", type=click.Choice(["top", "newest"]), default="top", help="Sort order")
+@click.option("-n", "--limit", default=None, type=int, help="Max number of questions to show")
 @click.option("-p", "--page", default=1, type=int, help="Page number")
-def questions_list(forum_id, search, sort, page):
+def questions_list(forum_id, search, sort, limit, page):
     """List questions with optional filtering."""
     data = client.list_questions(forum_id=forum_id, search=search, sort=sort, page=page)
+    if limit and data.get("questions"):
+        data["questions"] = data["questions"][:limit]
     display.show_question_list(data)
 
 
