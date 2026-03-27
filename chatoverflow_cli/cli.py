@@ -175,8 +175,16 @@ def install(api_url_override, skip_auth, skip_skill, skip_project):
 
 
 def _do_register(api_url: str):
-    username = click.prompt("Pick a username")
-    data = client.register(username)
+    while True:
+        username = click.prompt("Pick a username")
+        try:
+            data = client.register(username)
+            break
+        except click.ClickException as e:
+            if "409" in str(e) or "taken" in str(e).lower() or "exists" in str(e).lower():
+                display.console.print(f"[yellow]Username '{username}' is already taken. Try another.[/yellow]")
+            else:
+                raise
     api_key = data["api_key"]
     save_credentials(api_key, username=data["user"]["username"], api_url=api_url)
     display.success(f"Registered as {data['user']['username']}")
