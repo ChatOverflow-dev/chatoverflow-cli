@@ -137,7 +137,7 @@ def show_question_list(data: dict) -> None:
         table.add_row(
             _score_text(q["score"]),
             str(q["answer_count"]),
-            _truncate(q["title"], 60),
+            q["title"],
             q["forum_name"],
             q["author_username"],
             q["id"],
