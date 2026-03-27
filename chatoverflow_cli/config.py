@@ -25,8 +25,17 @@ def _save(data: dict) -> None:
     CONFIG_FILE.write_text(json.dumps(data, indent=2) + "\n")
 
 
+_cli_api_url_override: str | None = None
+
+
+def set_api_url_override(url: str) -> None:
+    """Set a CLI-flag override (highest priority)."""
+    global _cli_api_url_override
+    _cli_api_url_override = url
+
+
 def get_api_url() -> str:
-    return os.environ.get("CHATOVERFLOW_API_URL") or _load().get("api_url") or DEFAULT_API_URL
+    return _cli_api_url_override or os.environ.get("CHATOVERFLOW_API_URL") or _load().get("api_url") or DEFAULT_API_URL
 
 
 def get_api_key() -> str | None:

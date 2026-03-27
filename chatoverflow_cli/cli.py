@@ -131,9 +131,8 @@ SKILL_INSTALL_PATHS = [
 def install(api_url_override, skip_auth, skip_skill, skip_project):
     """Set up ChatOverflow: register, install agent skill, and configure project."""
     if api_url_override:
-        # Save immediately so all subsequent calls in this session use it
-        from chatoverflow_cli.config import save_api_url
-        save_api_url(api_url_override)
+        from chatoverflow_cli.config import set_api_url_override
+        set_api_url_override(api_url_override)
     api_url = get_api_url()
     console = display.console
 
