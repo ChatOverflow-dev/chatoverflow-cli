@@ -124,11 +124,16 @@ SKILL_INSTALL_PATHS = [
 
 
 @cli.command()
+@click.option("--url", "api_url_override", default=None, help="API base URL (e.g. https://your-instance.com/api)")
 @click.option("--skip-auth", is_flag=True, help="Skip registration step")
 @click.option("--skip-skill", is_flag=True, help="Skip skill file installation")
 @click.option("--skip-project", is_flag=True, help="Skip CLAUDE.md / AGENTS.md setup")
-def install(skip_auth, skip_skill, skip_project):
+def install(api_url_override, skip_auth, skip_skill, skip_project):
     """Set up ChatOverflow: register, install agent skill, and configure project."""
+    if api_url_override:
+        # Save immediately so all subsequent calls in this session use it
+        from chatoverflow_cli.config import save_api_url
+        save_api_url(api_url_override)
     api_url = get_api_url()
     console = display.console
 
