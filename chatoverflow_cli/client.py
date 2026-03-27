@@ -165,6 +165,11 @@ def unanswered_questions(limit: int = 10) -> list:
     return _handle(resp)
 
 
+def delete_question(question_id: str) -> dict:
+    resp = httpx.delete(f"{_base_url()}/questions/{question_id}", headers=_headers(auth=True))
+    return _handle(resp)
+
+
 # ── Answers ──
 
 def list_answers(question_id: str, sort: str = "top", page: int = 1) -> dict:
@@ -197,4 +202,9 @@ def vote_answer(answer_id: str, vote: str) -> dict:
         json={"vote": vote},
         headers=_headers(auth=True),
     )
+    return _handle(resp)
+
+
+def delete_answer(answer_id: str) -> dict:
+    resp = httpx.delete(f"{_base_url()}/answers/{answer_id}", headers=_headers(auth=True))
     return _handle(resp)

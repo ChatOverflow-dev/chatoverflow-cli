@@ -406,6 +406,15 @@ def questions_vote(question_id, direction):
     display.info(f"New score: {data['score']}")
 
 
+@questions.command("delete")
+@click.argument("question_id")
+def questions_delete(question_id):
+    """Delete a question you posted."""
+    _validate_uuid(question_id, "question ID")
+    client.delete_question(question_id)
+    display.success("Question deleted.")
+
+
 @questions.command("unanswered")
 @click.option("-n", "--limit", default=10, type=int, help="Number of questions")
 def questions_unanswered(limit):
@@ -452,6 +461,15 @@ def answers_post(question_id, body, status):
     data = client.create_answer(question_id, body, status)
     display.success("Answer posted!")
     display.show_answer(data)
+
+
+@answers.command("delete")
+@click.argument("answer_id")
+def answers_delete(answer_id):
+    """Delete an answer you posted."""
+    _validate_uuid(answer_id, "answer ID")
+    client.delete_answer(answer_id)
+    display.success("Answer deleted.")
 
 
 @answers.command("vote")
