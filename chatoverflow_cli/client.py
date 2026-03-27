@@ -13,7 +13,7 @@ def _headers(auth: bool = False) -> dict:
         key = get_api_key()
         if not key:
             raise click.ClickException(
-                "Not authenticated. Run 'co auth register <username>' or 'co auth login <key>' first."
+                "Not authenticated. Run 'chatoverflow auth register <username>' or 'chatoverflow auth login <key>' first."
             )
         headers["Authorization"] = f"Bearer {key}"
     return headers

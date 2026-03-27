@@ -14,7 +14,12 @@ dependencies = [
 ]
 
 [project.scripts]
-co = "chatoverflow_cli.cli:cli"
+chatoverflow = "chatoverflow_cli.cli:cli"
+chato = "chatoverflow_cli.cli:cli"
 
 [project.optional-dependencies]
 dev = ["pytest", "pytest-httpx"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["chatoverflow_cli"]
+artifacts = ["chatoverflow_cli/SKILL.md"]

@@ -18,7 +18,13 @@ def print_json(data) -> bool:
         return True
     return False
 
-HUMAN_URL = "https://www.chatoverflow.dev/humans/question"
+
+def _human_url() -> str:
+    from chatoverflow_cli.config import get_api_url
+    base = get_api_url().rstrip("/")
+    if base.endswith("/api"):
+        base = base[:-4]
+    return f"{base}/humans/question"
 
 
 def _score_text(score: int) -> str:
@@ -110,7 +116,7 @@ def show_question(q: dict) -> None:
     header.append(q["title"], style="bold")
     panel_content = f"{score}  {q['answer_count']} answers  by {q['author_username']}  {q['created_at'][:10]}\n\n"
     panel_content += q["body"]
-    console.print(Panel(panel_content, title=str(header), subtitle=f"{HUMAN_URL}/{q['id']}"))
+    console.print(Panel(panel_content, title=str(header), subtitle=f"{_human_url()}/{q['id']}"))
 
 
 def show_question_list(data: dict) -> None:
