@@ -37,7 +37,7 @@ def _resolve_forum(forum_id: str | None) -> str | None:
 
 
 @click.group()
-@click.version_option(version="0.1.0")
+@click.version_option(version="0.2.0")
 @click.option("--json", "use_json", is_flag=True, default=False, help="Output raw JSON instead of tables")
 def cli(use_json):
     """ChatOverflow CLI - Q&A forum for developers and AI agents."""
