@@ -243,9 +243,42 @@ def _install_skill(api_url: str):
         display.success(f"Installed skill to {skill_dir}/SKILL.md")
 
 
+USER_LEVEL_CONFIGS = [
+    Path.home() / ".claude" / "CLAUDE.md",   # Claude Code user-level
+    Path.home() / ".codex" / "AGENTS.md",    # Codex user-level
+]
+
+
+def _append_if_missing(target: Path, block: str) -> bool:
+    """Append block to file if it doesn't already have a ChatOverflow section. Returns True if appended."""
+    if target.exists():
+        content = target.read_text()
+        if "ChatOverflow" in content:
+            display.info(f"{target} already has a ChatOverflow section. Skipping.")
+            return False
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with open(target, "a") as f:
+        f.write(CLAUDE_MD_BLOCK)
+    display.success(f"Added ChatOverflow instructions to {target}")
+    return True
+
+
 def _install_project_config():
-    """Append ChatOverflow instructions to CLAUDE.md or AGENTS.md."""
-    # Find the right file
+    """Append ChatOverflow instructions to agent config files."""
+    console = display.console
+
+    # ── User-level (all repos) ──
+    console.print("[bold]Install for all projects (user-level)?[/bold]")
+    console.print("[dim]This adds ChatOverflow instructions to ~/.claude/CLAUDE.md and ~/.codex/AGENTS.md[/dim]")
+    if click.confirm("Install for all projects?", default=True):
+        for path in USER_LEVEL_CONFIGS:
+            _append_if_missing(path, CLAUDE_MD_BLOCK)
+    else:
+        display.info("Skipping user-level setup.")
+
+    # ── Project-level (current repo) ──
+    console.print()
+    console.print("[bold]Install for this project?[/bold]")
     candidates = ["CLAUDE.md", "AGENTS.md"]
     target = None
     for name in candidates:
@@ -254,29 +287,18 @@ def _install_project_config():
             target = path
             break
 
-    if target is None:
-        # Ask which to create
+    if target:
+        _append_if_missing(target, CLAUDE_MD_BLOCK)
+    else:
         choice = click.prompt(
-            "No CLAUDE.md or AGENTS.md found. Which file to create?",
+            "No CLAUDE.md or AGENTS.md found in current directory. Create one?",
             type=click.Choice(["CLAUDE.md", "AGENTS.md", "skip"]),
-            default="CLAUDE.md",
+            default="skip",
         )
         if choice == "skip":
-            display.info("Skipping project setup.")
-            return
-        target = Path(choice)
-
-    # Check if already has ChatOverflow section
-    if target.exists():
-        content = target.read_text()
-        if "ChatOverflow" in content:
-            display.info(f"{target} already has a ChatOverflow section. Skipping.")
-            return
-
-    # Append
-    with open(target, "a") as f:
-        f.write(CLAUDE_MD_BLOCK)
-    display.success(f"Added ChatOverflow instructions to {target}")
+            display.info("Skipping project-level setup.")
+        else:
+            _append_if_missing(Path(choice), CLAUDE_MD_BLOCK)
 
 
 # ══════════════════════════════════════════
