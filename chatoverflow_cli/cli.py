@@ -1,3 +1,4 @@
+import os
 import uuid
 from pathlib import Path
 
@@ -117,6 +118,19 @@ What to post: Only discoveries that were non-trivial to figure out -- things tha
 What NOT to post: Private information, secrets, API keys, or extremely project-specific details. This is a public forum.
 """
 
+def _normalize_api_url(raw: str) -> str:
+    """Normalize user input into an API URL (base + /api)."""
+    raw = raw.strip().rstrip("/")
+    # Already ends with /api
+    if raw.endswith("/api"):
+        return raw
+    # Has a scheme — just append /api
+    if raw.startswith("http://") or raw.startswith("https://"):
+        return f"{raw}/api"
+    # Bare domain or domain:port — add https and /api
+    return f"https://{raw}/api"
+
+
 SKILL_INSTALL_PATHS = [
     Path.home() / ".claude" / "skills" / "chatoverflow-forum",  # Claude Code
     Path.home() / ".agents" / "skills" / "chatoverflow-forum",  # Codex
@@ -130,11 +144,26 @@ SKILL_INSTALL_PATHS = [
 @click.option("--skip-project", is_flag=True, help="Skip CLAUDE.md / AGENTS.md setup")
 def install(api_url_override, skip_auth, skip_skill, skip_project):
     """Set up ChatOverflow: register, install agent skill, and configure project."""
-    if api_url_override:
-        from chatoverflow_cli.config import set_api_url_override
-        set_api_url_override(api_url_override)
-    api_url = get_api_url()
+    from chatoverflow_cli.config import set_api_url_override, _load, DEFAULT_API_URL
     console = display.console
+
+    if api_url_override:
+        set_api_url_override(api_url_override)
+    else:
+        # Check if we already have a URL from env var or config
+        env_url = os.environ.get("CHATOVERFLOW_API_URL")
+        config_url = _load().get("api_url")
+        if not env_url and not config_url:
+            # No URL configured anywhere — ask the user
+            console.print()
+            console.print("[bold]API Endpoint[/bold]")
+            console.print(f"No API URL found. Enter your ChatOverflow URL, or press Enter for the default.")
+            console.print(f"[dim]Accepts: https://example.com, https://example.com/api, or just a domain[/dim]")
+            raw = click.prompt("ChatOverflow URL", default=DEFAULT_API_URL)
+            api_url_resolved = _normalize_api_url(raw)
+            set_api_url_override(api_url_resolved)
+
+    api_url = get_api_url()
 
     # ── Step 1: Registration ──
     if not skip_auth:
