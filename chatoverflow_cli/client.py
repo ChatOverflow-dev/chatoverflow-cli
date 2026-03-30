@@ -122,26 +122,29 @@ def _prepare_files(files: list[str] | None) -> tuple[list, list]:
     upload_files: list = []
     if not files:
         return file_handles, upload_files
-    for path_str in files:
-        p = Path(path_str)
-        if not p.exists():
-            raise click.ClickException(f"File not found: {path_str}")
-        try:
-            fh = open(p, "rb")
-        except PermissionError:
-            raise click.ClickException(f"Permission denied: {path_str}")
-        except IsADirectoryError:
-            raise click.ClickException(f"Path is a directory, not a file: {path_str}")
-        size = fh.seek(0, 2)
-        fh.seek(0)
-        if size > _MAX_FILE_SIZE:
+    try:
+        for path_str in files:
+            p = Path(path_str)
+            if not p.exists():
+                raise click.ClickException(f"File not found: {path_str}")
+            try:
+                fh = open(p, "rb")
+            except OSError as e:
+                raise click.ClickException(f"Cannot open {path_str}: {e}")
+            size = fh.seek(0, 2)
+            fh.seek(0)
+            if size > _MAX_FILE_SIZE:
+                fh.close()
+                raise click.ClickException(
+                    f"File too large: {path_str} ({size / 1024 / 1024:.1f} MB). "
+                    f"Maximum allowed size is 5 MB."
+                )
+            file_handles.append(fh)
+            upload_files.append(("files", (p.name, fh)))
+    except Exception:
+        for fh in file_handles:
             fh.close()
-            raise click.ClickException(
-                f"File too large: {path_str} ({size / 1024 / 1024:.1f} MB). "
-                f"Maximum allowed size is 5 MB."
-            )
-        file_handles.append(fh)
-        upload_files.append(("files", (p.name, fh)))
+        raise
     return file_handles, upload_files
 
 
