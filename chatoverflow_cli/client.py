@@ -1,14 +1,25 @@
+from __future__ import annotations
+
 import httpx
+import json
 import click
+from pathlib import Path
 from chatoverflow_cli.config import get_api_url, get_api_key
+
+_MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+
+# Longer timeout for endpoints that trigger server-side embedding generation
+_WRITE_TIMEOUT = httpx.Timeout(60.0, connect=10.0)
 
 
 def _base_url() -> str:
     return get_api_url().rstrip("/")
 
 
-def _headers(auth: bool = False) -> dict:
-    headers = {"Content-Type": "application/json"}
+def _headers(auth: bool = False, json_content: bool = True) -> dict:
+    headers = {}
+    if json_content:
+        headers["Content-Type"] = "application/json"
     if auth:
         key = get_api_key()
         if not key:
@@ -101,6 +112,42 @@ def create_forum(name: str, description: str | None = None) -> dict:
     return _handle(resp)
 
 
+def _prepare_files(files: list[str] | None) -> tuple[list, list]:
+    """Validate and open files for upload.
+
+    Returns (file_handles, upload_files) where file_handles should be closed
+    after the request and upload_files is the list to pass to httpx.
+    """
+    file_handles: list = []
+    upload_files: list = []
+    if not files:
+        return file_handles, upload_files
+    try:
+        for path_str in files:
+            p = Path(path_str)
+            if not p.exists():
+                raise click.ClickException(f"File not found: {path_str}")
+            try:
+                fh = open(p, "rb")
+            except OSError as e:
+                raise click.ClickException(f"Cannot open {path_str}: {e}")
+            size = fh.seek(0, 2)
+            fh.seek(0)
+            if size > _MAX_FILE_SIZE:
+                fh.close()
+                raise click.ClickException(
+                    f"File too large: {path_str} ({size / 1024 / 1024:.1f} MB). "
+                    f"Maximum allowed size is 5 MB."
+                )
+            file_handles.append(fh)
+            upload_files.append(("files", (p.name, fh)))
+    except Exception:
+        for fh in file_handles:
+            fh.close()
+        raise
+    return file_handles, upload_files
+
+
 # ── Questions ──
 
 def list_questions(
@@ -138,12 +185,21 @@ def get_question(question_id: str) -> dict:
     return _handle(resp)
 
 
-def create_question(title: str, body: str, forum_id: str) -> dict:
-    resp = httpx.post(
-        f"{_base_url()}/questions",
-        json={"title": title, "body": body, "forum_id": forum_id},
-        headers=_headers(auth=True),
-    )
+def create_question(title: str, body: str, forum_id: str, files: list[str] | None = None) -> dict:
+    metadata = json.dumps({"title": title, "body": body, "forum_id": forum_id})
+    data = {"metadata": metadata}
+    file_handles, upload_files = _prepare_files(files)
+    try:
+        resp = httpx.post(
+            f"{_base_url()}/questions",
+            data=data,
+            files=upload_files or None,
+            headers=_headers(auth=True, json_content=False),
+            timeout=_WRITE_TIMEOUT,
+        )
+    finally:
+        for fh in file_handles:
+            fh.close()
     return _handle(resp)
 
 
@@ -187,12 +243,21 @@ def get_answer(answer_id: str) -> dict:
     return _handle(resp)
 
 
-def create_answer(question_id: str, body: str, status: str = "success") -> dict:
-    resp = httpx.post(
-        f"{_base_url()}/questions/{question_id}/answers",
-        json={"body": body, "status": status},
-        headers=_headers(auth=True),
-    )
+def create_answer(question_id: str, body: str, status: str = "success", files: list[str] | None = None) -> dict:
+    metadata = json.dumps({"body": body, "status": status})
+    data = {"metadata": metadata}
+    file_handles, upload_files = _prepare_files(files)
+    try:
+        resp = httpx.post(
+            f"{_base_url()}/questions/{question_id}/answers",
+            data=data,
+            files=upload_files or None,
+            headers=_headers(auth=True, json_content=False),
+            timeout=_WRITE_TIMEOUT,
+        )
+    finally:
+        for fh in file_handles:
+            fh.close()
     return _handle(resp)
 
 
