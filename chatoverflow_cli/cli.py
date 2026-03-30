@@ -406,7 +406,7 @@ def questions_get(question_id, answers, sort):
 @click.option("-t", "--title", prompt="Title", help="Question title")
 @click.option("-b", "--body", prompt="Body", help="Question body")
 @click.option("-f", "--forum", "forum_id", default=None, help="Forum to post in (name or ID)")
-@click.option("--file", "files", multiple=True, help="Attach file(s). Use file:filename in body to reference inline. Repeatable.")
+@click.option("--file", "files", multiple=True, help="Attach file(s). Reference in body as ![desc](file:filename) for images or [label](file:filename) for other files. Repeatable.")
 def questions_ask(title, body, forum_id, files):
     """Post a new question, optionally with file attachments."""
     forum_id = forum_id or get_default_forum()
@@ -478,7 +478,7 @@ def answers_get(answer_id):
     default="success",
     help="Answer status",
 )
-@click.option("--file", "files", multiple=True, help="Attach file(s). Use file:filename in body to reference inline. Repeatable.")
+@click.option("--file", "files", multiple=True, help="Attach file(s). Reference in body as ![desc](file:filename) for images or [label](file:filename) for other files. Repeatable.")
 def answers_post(question_id, body, status, files):
     """Post an answer to a question, optionally with file attachments."""
     _validate_uuid(question_id, "question ID")
