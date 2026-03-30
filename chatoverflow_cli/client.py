@@ -1,14 +1,21 @@
 import httpx
+import json
 import click
+from pathlib import Path
 from chatoverflow_cli.config import get_api_url, get_api_key
+
+# Longer timeout for endpoints that trigger server-side embedding generation
+_WRITE_TIMEOUT = httpx.Timeout(60.0, connect=10.0)
 
 
 def _base_url() -> str:
     return get_api_url().rstrip("/")
 
 
-def _headers(auth: bool = False) -> dict:
-    headers = {"Content-Type": "application/json"}
+def _headers(auth: bool = False, json_content: bool = True) -> dict:
+    headers = {}
+    if json_content:
+        headers["Content-Type"] = "application/json"
     if auth:
         key = get_api_key()
         if not key:
@@ -138,12 +145,30 @@ def get_question(question_id: str) -> dict:
     return _handle(resp)
 
 
-def create_question(title: str, body: str, forum_id: str) -> dict:
-    resp = httpx.post(
-        f"{_base_url()}/questions",
-        json={"title": title, "body": body, "forum_id": forum_id},
-        headers=_headers(auth=True),
-    )
+def create_question(title: str, body: str, forum_id: str, files: list[str] | None = None) -> dict:
+    metadata = json.dumps({"title": title, "body": body, "forum_id": forum_id})
+    data = {"metadata": metadata}
+    file_handles = []
+    upload_files = []
+    try:
+        if files:
+            for path_str in files:
+                p = Path(path_str)
+                if not p.exists():
+                    raise click.ClickException(f"File not found: {path_str}")
+                fh = open(p, "rb")
+                file_handles.append(fh)
+                upload_files.append(("files", (p.name, fh)))
+        resp = httpx.post(
+            f"{_base_url()}/questions",
+            data=data,
+            files=upload_files or None,
+            headers=_headers(auth=True, json_content=False),
+            timeout=_WRITE_TIMEOUT,
+        )
+    finally:
+        for fh in file_handles:
+            fh.close()
     return _handle(resp)
 
 
@@ -187,12 +212,30 @@ def get_answer(answer_id: str) -> dict:
     return _handle(resp)
 
 
-def create_answer(question_id: str, body: str, status: str = "success") -> dict:
-    resp = httpx.post(
-        f"{_base_url()}/questions/{question_id}/answers",
-        json={"body": body, "status": status},
-        headers=_headers(auth=True),
-    )
+def create_answer(question_id: str, body: str, status: str = "success", files: list[str] | None = None) -> dict:
+    metadata = json.dumps({"body": body, "status": status})
+    data = {"metadata": metadata}
+    file_handles = []
+    upload_files = []
+    try:
+        if files:
+            for path_str in files:
+                p = Path(path_str)
+                if not p.exists():
+                    raise click.ClickException(f"File not found: {path_str}")
+                fh = open(p, "rb")
+                file_handles.append(fh)
+                upload_files.append(("files", (p.name, fh)))
+        resp = httpx.post(
+            f"{_base_url()}/questions/{question_id}/answers",
+            data=data,
+            files=upload_files or None,
+            headers=_headers(auth=True, json_content=False),
+            timeout=_WRITE_TIMEOUT,
+        )
+    finally:
+        for fh in file_handles:
+            fh.close()
     return _handle(resp)
 
 

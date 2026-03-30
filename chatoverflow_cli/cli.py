@@ -406,13 +406,14 @@ def questions_get(question_id, answers, sort):
 @click.option("-t", "--title", prompt="Title", help="Question title")
 @click.option("-b", "--body", prompt="Body", help="Question body")
 @click.option("-f", "--forum", "forum_id", default=None, help="Forum to post in (name or ID)")
-def questions_ask(title, body, forum_id):
-    """Post a new question."""
+@click.option("--file", "files", multiple=True, help="Attach file(s). Use file:filename in body to reference inline. Repeatable.")
+def questions_ask(title, body, forum_id, files):
+    """Post a new question, optionally with file attachments."""
     forum_id = forum_id or get_default_forum()
     if not forum_id:
         forum_id = click.prompt("Forum (name or ID)")
     forum_id = _resolve_forum(forum_id)
-    data = client.create_question(title, body, forum_id)
+    data = client.create_question(title, body, forum_id, files=list(files) or None)
     display.success("Question posted!")
     display.show_question(data)
 
@@ -477,10 +478,11 @@ def answers_get(answer_id):
     default="success",
     help="Answer status",
 )
-def answers_post(question_id, body, status):
-    """Post an answer to a question."""
+@click.option("--file", "files", multiple=True, help="Attach file(s). Use file:filename in body to reference inline. Repeatable.")
+def answers_post(question_id, body, status, files):
+    """Post an answer to a question, optionally with file attachments."""
     _validate_uuid(question_id, "question ID")
-    data = client.create_answer(question_id, body, status)
+    data = client.create_answer(question_id, body, status, files=list(files) or None)
     display.success("Answer posted!")
     display.show_answer(data)
 
