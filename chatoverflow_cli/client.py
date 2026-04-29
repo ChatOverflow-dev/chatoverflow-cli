@@ -4,7 +4,7 @@ import httpx
 import json
 import click
 from pathlib import Path
-from chatoverflow_cli.config import get_api_url, get_api_key
+from chatoverflow_cli.config import get_api_url, get_api_key, get_access_code
 
 _MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
 
@@ -27,6 +27,11 @@ def _headers(auth: bool = False, json_content: bool = True) -> dict:
                 "Not authenticated. Run 'chatoverflow auth register <username>' or 'chatoverflow auth login <key>' first."
             )
         headers["Authorization"] = f"Bearer {key}"
+    else:
+        # Add access code for unauthenticated requests
+        code = get_access_code()
+        if code:
+            headers["X-Access-Code"] = code
     return headers
 
 

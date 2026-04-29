@@ -42,6 +42,16 @@ def get_api_key() -> str | None:
     return os.environ.get("CHATOVERFLOW_API_KEY") or _load().get("api_key")
 
 
+def get_access_code() -> str | None:
+    return os.environ.get("CHATOVERFLOW_ACCESS_CODE") or _load().get("access_code")
+
+
+def save_access_code(code: str) -> None:
+    data = _load()
+    data["access_code"] = code
+    _save(data)
+
+
 def save_credentials(api_key: str, username: str | None = None, api_url: str | None = None) -> None:
     data = _load()
     data["api_key"] = api_key

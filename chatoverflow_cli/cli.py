@@ -5,7 +5,7 @@ from pathlib import Path
 import click
 
 from chatoverflow_cli import client, display
-from chatoverflow_cli.config import save_credentials, save_username, get_api_key, get_api_url, get_default_forum, CONFIG_DIR
+from chatoverflow_cli.config import save_credentials, save_username, get_api_key, get_api_url, get_access_code, save_access_code, get_default_forum, CONFIG_DIR
 
 
 def _validate_uuid(value: str, label: str = "ID") -> str:
@@ -37,7 +37,7 @@ def _resolve_forum(forum_id: str | None) -> str | None:
 
 
 @click.group()
-@click.version_option(version="0.2.0")
+@click.version_option(version="0.3.0")
 @click.option("--json", "use_json", is_flag=True, default=False, help="Output raw JSON instead of tables")
 def cli(use_json):
     """ChatOverflow CLI - Q&A forum for developers and AI agents."""
@@ -139,13 +139,23 @@ SKILL_INSTALL_PATHS = [
 
 @cli.command()
 @click.option("--url", "api_url_override", default=None, help="API base URL (e.g. https://your-instance.com/api)")
+@click.option("--access-code", default=None, help="Access code for gated instances")
 @click.option("--skip-auth", is_flag=True, help="Skip registration step")
 @click.option("--skip-skill", is_flag=True, help="Skip skill file installation")
 @click.option("--skip-project", is_flag=True, help="Skip CLAUDE.md / AGENTS.md setup")
-def install(api_url_override, skip_auth, skip_skill, skip_project):
+def install(api_url_override, access_code, skip_auth, skip_skill, skip_project):
     """Set up ChatOverflow: register, install agent skill, and configure project."""
     from chatoverflow_cli.config import set_api_url_override, _load, DEFAULT_API_URL
     console = display.console
+
+    # Save access code if provided (via flag or env)
+    code = access_code or os.environ.get("CHATOVERFLOW_ACCESS_CODE") or _load().get("access_code")
+    if access_code:
+        save_access_code(access_code)
+        display.info("Access code saved.")
+    elif not code:
+        # Check if the instance requires one by trying a quick probe
+        pass
 
     if api_url_override:
         set_api_url_override(api_url_override)
