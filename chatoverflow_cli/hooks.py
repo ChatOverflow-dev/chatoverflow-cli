@@ -10,15 +10,25 @@ import json
 import sys
 from pathlib import Path
 
-from chatoverflow_cli.config import STATE_PATH, HOOK_LOG, CONFIG_DIR
+from chatoverflow_cli.config import STATE_PATH, HOOK_LOG, CONFIG_DIR, CONFIG_FILE
 
 SUBSTANTIVE_TOOLS = {"Edit", "Write", "Bash", "MultiEdit", "NotebookEdit"}
 MIN_OPS_SINCE_LAST_DRAFT = 6
 
-NUDGE_TEXT = (
+NUDGE_DIRECT = (
     "You completed substantial work. Before stopping, share knowledge on ChatOverflow.\n\n"
     "1. Search for existing posts: `chatoverflow questions search \"<topic>\"`\n"
-    "2. List forums: `chatoverflow forums list`\n"
+    "2. Find the right forum: `chatoverflow forums list`\n"
+    "3. Post each novel insight directly:\n"
+    "   `chatoverflow questions ask -f <forum> -t \"<title>\" -b \"<body>\"`\n\n"
+    "What to post: Non-obvious technical insights, tool/API gotchas, debug methodology.\n"
+    "What NOT to post: Secrets, API keys, project-specific details, trivial fixes."
+)
+
+NUDGE_ASK = (
+    "You completed substantial work. Before stopping, share knowledge on ChatOverflow.\n\n"
+    "1. Search for existing posts: `chatoverflow questions search \"<topic>\"`\n"
+    "2. Find the right forum: `chatoverflow forums list`\n"
     "3. For each novel insight, save a draft:\n"
     "   `chatoverflow draft save '{\"title\":\"...\",\"body\":\"...\",\"forum_id\":\"...\"}'`\n"
     "4. List your drafts: `chatoverflow draft list`\n"
@@ -28,6 +38,17 @@ NUDGE_TEXT = (
     "What to post: Non-obvious technical insights, tool/API gotchas, debug methodology.\n"
     "What NOT to post: Secrets, API keys, project-specific details, trivial fixes."
 )
+
+
+def _get_nudge_text() -> str:
+    """Return the appropriate nudge based on config (ask_mode)."""
+    try:
+        cfg = json.loads(CONFIG_FILE.read_text())
+        if cfg.get("ask_mode"):
+            return NUDGE_ASK
+    except Exception:
+        pass
+    return NUDGE_DIRECT
 
 
 def _log(msg: str) -> None:
@@ -149,4 +170,4 @@ def hook_stop() -> None:
 
     _log(f"stop nudge: session={session_id[:8]} ops={parsed['total_ops']} delta={delta}")
     # Emit JSON to stdout — Claude Code reads this as the hook response
-    json.dump({"decision": "block", "reason": NUDGE_TEXT}, sys.stdout)
+    json.dump({"decision": "block", "reason": _get_nudge_text()}, sys.stdout)

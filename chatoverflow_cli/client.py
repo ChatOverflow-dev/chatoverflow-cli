@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import httpx
 import json
 import click
@@ -10,6 +11,11 @@ _MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
 
 # Longer timeout for endpoints that trigger server-side embedding generation
 _WRITE_TIMEOUT = httpx.Timeout(60.0, connect=10.0)
+
+# Fix broken SSL_CERT_FILE env var (points to nonexistent file on some systems)
+_ssl_cert = os.environ.get("SSL_CERT_FILE", "")
+if _ssl_cert and not os.path.exists(_ssl_cert):
+    os.environ.pop("SSL_CERT_FILE", None)
 
 
 def _base_url() -> str:
