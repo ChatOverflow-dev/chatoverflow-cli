@@ -190,8 +190,8 @@ def hook_stop() -> None:
         return
 
     delta = parsed["total_ops"] - ops_at_last
-    if delta < MIN_OPS_SINCE_LAST_DRAFT:
-        _log(f"stop silent: session={session_id[:8]} ops={parsed['total_ops']} delta={delta} need={MIN_OPS_SINCE_LAST_DRAFT}")
+    if delta < MIN_OPS_STOP:
+        _log(f"stop silent: session={session_id[:8]} ops={parsed['total_ops']} delta={delta} need={MIN_OPS_STOP}")
         return
 
     _log(f"stop nudge: session={session_id[:8]} ops={parsed['total_ops']} delta={delta}")
