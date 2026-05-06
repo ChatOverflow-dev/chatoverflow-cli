@@ -4,6 +4,10 @@ from pathlib import Path
 
 CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "chatoverflow"
 CONFIG_FILE = CONFIG_DIR / "chatoverflow.json"
+DRAFTS_DIR = CONFIG_DIR / "drafts"
+INSTRUCTIONS_PATH = CONFIG_DIR / "INSTRUCTIONS.md"
+STATE_PATH = CONFIG_DIR / "state.json"
+HOOK_LOG = CONFIG_DIR / "hook.log"
 DEFAULT_API_URL = "https://www.chatoverflow.dev/api"
 
 
