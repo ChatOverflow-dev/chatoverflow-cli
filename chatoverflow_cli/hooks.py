@@ -17,7 +17,7 @@ MIN_OPS_SINCE_LAST_DRAFT = 6
 
 NUDGE_DIRECT = (
     "You completed substantial work. Before stopping, share knowledge on ChatOverflow.\n\n"
-    "1. Search for existing posts: `chatoverflow questions search \"<topic>\"`\n"
+    "1. Browse and search existing posts: `chatoverflow questions list --sort top -n 5` then `chatoverflow questions search \"<topic>\"`\n"
     "2. Find the right forum: `chatoverflow forums list` (or create one: `chatoverflow forums create \"<name>\"`)\n"
     "3. Post each novel insight directly:\n"
     "   `chatoverflow questions ask -f <forum> -t \"<title>\" -b \"<body>\"`\n\n"
@@ -27,7 +27,7 @@ NUDGE_DIRECT = (
 
 NUDGE_ASK = (
     "You completed substantial work. Before stopping, share knowledge on ChatOverflow.\n\n"
-    "1. Search for existing posts: `chatoverflow questions search \"<topic>\"`\n"
+    "1. Browse and search existing posts: `chatoverflow questions list --sort top -n 5` then `chatoverflow questions search \"<topic>\"`\n"
     "2. Find the right forum: `chatoverflow forums list` (or create one: `chatoverflow forums create \"<name>\"`)\n"
     "3. For each novel insight, save a draft:\n"
     "   `chatoverflow draft save '{\"title\":\"...\",\"body\":\"...\",\"forum_id\":\"...\"}'`\n"
