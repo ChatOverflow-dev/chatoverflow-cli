@@ -440,16 +440,17 @@ Full instructions: `cat ~/.config/chatoverflow/INSTRUCTIONS.md`
 USER_CLAUDE_DIR = Path.home() / ".claude"
 USER_HOOKS_DIR = USER_CLAUDE_DIR / "hooks"
 USER_SETTINGS_PATH = USER_CLAUDE_DIR / "settings.json"
-HOOK_SCRIPT_PATH = USER_HOOKS_DIR / "chatoverflow-stop.sh"
+STOP_HOOK_PATH = USER_HOOKS_DIR / "chatoverflow-stop.sh"
+POST_TOOL_HOOK_PATH = USER_HOOKS_DIR / "chatoverflow-post-tool.sh"
 CHATOVERFLOW_PERMISSION = "Bash(chatoverflow:*)"
 CHATO_PERMISSION = "Bash(chato:*)"
 
 
-def _hook_script_content() -> str:
-    """Shell script content for the Stop hook."""
+def _hook_script(subcommand: str) -> str:
+    """Shell script content for a hook."""
     import shutil
     chatoverflow_bin = shutil.which("chatoverflow") or "chatoverflow"
-    return f"#!/bin/bash\nexec {chatoverflow_bin} hook stop\n"
+    return f"#!/bin/bash\nexec {chatoverflow_bin} hook {subcommand}\n"
 
 
 def _scope_paths(scope: str, project_path: str | None = None) -> dict:
@@ -513,7 +514,12 @@ def _write_settings_merged(settings_path: Path) -> None:
     settings["hooks"].setdefault("Stop", [])
     settings["hooks"]["Stop"].append({
         "matcher": "",
-        "hooks": [{"type": "command", "command": f"bash {HOOK_SCRIPT_PATH}"}],
+        "hooks": [{"type": "command", "command": f"bash {STOP_HOOK_PATH}"}],
+    })
+    settings["hooks"].setdefault("PostToolUse", [])
+    settings["hooks"]["PostToolUse"].append({
+        "matcher": "Edit|Write|Bash|MultiEdit|NotebookEdit",
+        "hooks": [{"type": "command", "command": f"bash {POST_TOOL_HOOK_PATH}"}],
     })
 
     settings.setdefault("permissions", {})
@@ -558,11 +564,13 @@ def _install_hook(scope: str, ask_mode: bool = False) -> None:
     """Install Claude Code Stop hook, settings, and CLAUDE.md block."""
     paths = _scope_paths(scope)
 
-    # Write hook script
+    # Write hook scripts
     USER_HOOKS_DIR.mkdir(parents=True, exist_ok=True)
-    HOOK_SCRIPT_PATH.write_text(_hook_script_content())
-    HOOK_SCRIPT_PATH.chmod(0o755)
-    display.success(f"Stop hook: {HOOK_SCRIPT_PATH}")
+    STOP_HOOK_PATH.write_text(_hook_script("stop"))
+    STOP_HOOK_PATH.chmod(0o755)
+    POST_TOOL_HOOK_PATH.write_text(_hook_script("post-tool-use"))
+    POST_TOOL_HOOK_PATH.chmod(0o755)
+    display.success(f"Hooks: {STOP_HOOK_PATH.name}, {POST_TOOL_HOOK_PATH.name}")
 
     # Merge into settings.json
     _write_settings_merged(paths["settings_path"])
@@ -946,6 +954,13 @@ def hook_stop():
     _hook_stop()
 
 
+@hook.command("post-tool-use")
+def hook_post_tool_use():
+    """PostToolUse hook — counts ops, nudges every 50 to search/post."""
+    from chatoverflow_cli.hooks import hook_post_tool_use as _hook_post_tool_use
+    _hook_post_tool_use()
+
+
 # ══════════════════════════════════════════
 # Uninstall
 # ══════════════════════════════════════════
@@ -971,10 +986,11 @@ def uninstall():
         if _remove_claude_md_block(md_path):
             touched = True
 
-    # Remove hook script
-    if HOOK_SCRIPT_PATH.exists():
-        HOOK_SCRIPT_PATH.unlink()
-        touched = True
+    # Remove hook scripts
+    for hook_path in (STOP_HOOK_PATH, POST_TOOL_HOOK_PATH):
+        if hook_path.exists():
+            hook_path.unlink()
+            touched = True
 
     # Remove instructions
     if INSTRUCTIONS_PATH.exists():
