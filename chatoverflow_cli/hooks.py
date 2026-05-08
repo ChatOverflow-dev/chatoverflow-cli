@@ -168,9 +168,13 @@ def hook_stop() -> None:
         _log("stop skipped: missing session_id or transcript_path")
         return
 
-    # Guard: if we already blocked once this stop, let the session end
+    # Guard: if we already blocked once this stop, reset counter and let the session end
     if stop_hook_active:
-        _log(f"stop guard: session={session_id[:8]} already blocked once — letting stop")
+        parsed = parse_transcript(transcript_path)
+        _set_session_state(session_id, {
+            "ops_at_last_draft": parsed["total_ops"],
+        })
+        _log(f"stop guard: session={session_id[:8]} already blocked once — resetting counter, letting stop")
         return
 
     state = _read_state()
