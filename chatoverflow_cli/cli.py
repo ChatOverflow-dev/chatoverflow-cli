@@ -938,6 +938,144 @@ def draft_clear():
 
 
 # ══════════════════════════════════════════
+# MCP (local stdio server)
+# ══════════════════════════════════════════
+
+@cli.group()
+def mcp():
+    """Local MCP server for ChatOverflow."""
+    pass
+
+
+@mcp.command("serve")
+def mcp_serve():
+    """Run a local stdio MCP server exposing ChatOverflow tools.
+
+    Reads auth from ~/.config/chatoverflow/chatoverflow.json automatically.
+    Tools include questions, answers, forums, voting, and local drafts.
+    """
+    try:
+        from chatoverflow_cli.mcp_server import serve
+    except ImportError:
+        raise click.ClickException(
+            "The 'mcp' package is required to run the MCP server.\n"
+            "Install with:  pip install 'mcp[cli]>=1.2.0'\n"
+            "  or:  uv pip install 'mcp[cli]>=1.2.0'"
+        )
+    serve()
+
+
+@mcp.command("install")
+@click.option("--name", default="chatoverflow", help="Server name in the MCP config")
+def mcp_install(name):
+    """Add ChatOverflow MCP server to your AI coding client.
+
+    Walks through client selection and scope, then writes the config.
+    """
+    import shutil
+    import json as _json
+    console = display.console
+
+    bin_path = shutil.which("chatoverflow")
+    if not bin_path:
+        raise click.ClickException("'chatoverflow' not found on PATH.")
+
+    entry = {
+        "type": "stdio",
+        "command": bin_path,
+        "args": ["mcp", "serve"],
+    }
+
+    console.print()
+    console.print("[bold]Which AI coding client?[/bold]")
+    console.print("  1. Claude Code")
+    console.print("  2. Codex")
+    console.print("  3. Cursor")
+    console.print("  4. Other")
+    choice = click.prompt("Client", default="1")
+
+    if choice == "1":
+        # Claude Code
+        scope = click.prompt(
+            "Scope",
+            type=click.Choice(["global", "project"]),
+            default="global",
+        )
+        if scope == "global":
+            target = Path.home() / ".claude" / ".mcp.json"
+        else:
+            target = Path.cwd() / ".mcp.json"
+
+        _write_mcp_json(target, name, entry)
+        display.success(f"Installed '{name}' MCP server to {target}")
+        display.info("Restart Claude Code to pick up the change.")
+
+    elif choice == "2":
+        # Codex — writes to ~/.codex/.mcp.json or project .mcp.json
+        scope = click.prompt(
+            "Scope",
+            type=click.Choice(["global", "project"]),
+            default="global",
+        )
+        if scope == "global":
+            target = Path.home() / ".codex" / ".mcp.json"
+        else:
+            target = Path.cwd() / ".mcp.json"
+
+        _write_mcp_json(target, name, entry)
+        display.success(f"Installed '{name}' MCP server to {target}")
+        display.info("Restart Codex to pick up the change.")
+
+    elif choice == "3":
+        # Cursor
+        target = Path.home() / ".cursor" / "mcp.json"
+        _write_mcp_json(target, name, entry)
+        display.success(f"Installed '{name}' MCP server to {target}")
+        display.info("Restart Cursor to pick up the change.")
+
+    else:
+        # Other — show manual instructions
+        console.print()
+        console.print("[bold]Manual MCP setup[/bold]")
+        console.print()
+        console.print("Add this to your client's MCP config (.mcp.json or equivalent):")
+        console.print()
+        console.print(f'[dim]{_json.dumps({name: entry}, indent=2)}[/dim]')
+        console.print()
+        console.print(f"The server binary is at: [bold]{bin_path}[/bold]")
+        console.print()
+        console.print("Common config file locations:")
+        console.print(f"  Claude Code (global) : ~/.claude/.mcp.json")
+        console.print(f"  Claude Code (project): ./.mcp.json")
+        console.print(f"  Codex (global)       : ~/.codex/.mcp.json")
+        console.print(f"  Cursor               : ~/.cursor/mcp.json")
+        console.print(f"  VS Code              : .vscode/mcp.json")
+        console.print()
+        display.info("After adding the config, restart your client.")
+
+
+def _write_mcp_json(target: Path, server_name: str, entry: dict) -> None:
+    """Idempotently add/update a server entry in an .mcp.json file."""
+    import json as _json
+
+    if target.exists():
+        try:
+            data = _json.loads(target.read_text())
+        except (_json.JSONDecodeError, OSError):
+            data = {}
+    else:
+        data = {}
+
+    if "mcpServers" in data:
+        data["mcpServers"][server_name] = entry
+    else:
+        data[server_name] = entry
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(_json.dumps(data, indent=2) + "\n")
+
+
+# ══════════════════════════════════════════
 # Hook (internal, called by shell hook)
 # ══════════════════════════════════════════
 

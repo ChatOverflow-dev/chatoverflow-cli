@@ -17,6 +17,9 @@ _ssl_cert = os.environ.get("SSL_CERT_FILE", "")
 if _ssl_cert and not os.path.exists(_ssl_cert):
     os.environ.pop("SSL_CERT_FILE", None)
 
+# Shared HTTP client — disable SSL verification for VPN/proxy environments
+_http = httpx.Client(verify=False, timeout=httpx.Timeout(30.0, connect=10.0))
+
 
 def _base_url() -> str:
     return get_api_url().rstrip("/")
@@ -56,34 +59,34 @@ def _handle(resp: httpx.Response) -> dict | list:
 # ── Auth ──
 
 def register(username: str) -> dict:
-    resp = httpx.post(f"{_base_url()}/auth/register", json={"username": username}, headers=_headers())
+    resp = _http.post(f"{_base_url()}/auth/register", json={"username": username}, headers=_headers())
     return _handle(resp)
 
 
 # ── Users ──
 
 def me() -> dict:
-    resp = httpx.get(f"{_base_url()}/users/me", headers=_headers(auth=True))
+    resp = _http.get(f"{_base_url()}/users/me", headers=_headers(auth=True))
     return _handle(resp)
 
 
 def get_user(user_id: str) -> dict:
-    resp = httpx.get(f"{_base_url()}/users/{user_id}", headers=_headers())
+    resp = _http.get(f"{_base_url()}/users/{user_id}", headers=_headers())
     return _handle(resp)
 
 
 def get_user_by_username(username: str) -> dict:
-    resp = httpx.get(f"{_base_url()}/users/username/{username}", headers=_headers())
+    resp = _http.get(f"{_base_url()}/users/username/{username}", headers=_headers())
     return _handle(resp)
 
 
 def top_users(limit: int = 10) -> list:
-    resp = httpx.get(f"{_base_url()}/users/top", params={"limit": limit}, headers=_headers())
+    resp = _http.get(f"{_base_url()}/users/top", params={"limit": limit}, headers=_headers())
     return _handle(resp)
 
 
 def user_questions(user_id: str, sort: str = "newest", page: int = 1) -> dict:
-    resp = httpx.get(
+    resp = _http.get(
         f"{_base_url()}/users/{user_id}/questions",
         params={"sort": sort, "page": page},
         headers=_headers(),
@@ -92,7 +95,7 @@ def user_questions(user_id: str, sort: str = "newest", page: int = 1) -> dict:
 
 
 def user_answers(user_id: str, sort: str = "newest", page: int = 1) -> dict:
-    resp = httpx.get(
+    resp = _http.get(
         f"{_base_url()}/users/{user_id}/answers",
         params={"sort": sort, "page": page},
         headers=_headers(),
@@ -106,12 +109,12 @@ def list_forums(search: str | None = None, page: int = 1) -> dict:
     params: dict = {"page": page}
     if search:
         params["search"] = search
-    resp = httpx.get(f"{_base_url()}/forums", params=params, headers=_headers())
+    resp = _http.get(f"{_base_url()}/forums", params=params, headers=_headers())
     return _handle(resp)
 
 
 def get_forum(forum_id: str) -> dict:
-    resp = httpx.get(f"{_base_url()}/forums/{forum_id}", headers=_headers())
+    resp = _http.get(f"{_base_url()}/forums/{forum_id}", headers=_headers())
     return _handle(resp)
 
 
@@ -119,7 +122,7 @@ def create_forum(name: str, description: str | None = None) -> dict:
     body: dict = {"name": name}
     if description:
         body["description"] = description
-    resp = httpx.post(f"{_base_url()}/forums", json=body, headers=_headers(auth=True))
+    resp = _http.post(f"{_base_url()}/forums", json=body, headers=_headers(auth=True))
     return _handle(resp)
 
 
@@ -172,7 +175,7 @@ def list_questions(
         params["forum_id"] = forum_id
     if search:
         params["search"] = search
-    resp = httpx.get(f"{_base_url()}/questions", params=params, headers=_headers())
+    resp = _http.get(f"{_base_url()}/questions", params=params, headers=_headers())
     return _handle(resp)
 
 
@@ -187,12 +190,12 @@ def search_questions(
         params["keywords"] = keywords
     if forum_id:
         params["forum_id"] = forum_id
-    resp = httpx.get(f"{_base_url()}/questions/search", params=params, headers=_headers())
+    resp = _http.get(f"{_base_url()}/questions/search", params=params, headers=_headers())
     return _handle(resp)
 
 
 def get_question(question_id: str) -> dict:
-    resp = httpx.get(f"{_base_url()}/questions/{question_id}", headers=_headers())
+    resp = _http.get(f"{_base_url()}/questions/{question_id}", headers=_headers())
     return _handle(resp)
 
 
@@ -201,7 +204,7 @@ def create_question(title: str, body: str, forum_id: str, files: list[str] | Non
     data = {"metadata": metadata}
     file_handles, upload_files = _prepare_files(files)
     try:
-        resp = httpx.post(
+        resp = _http.post(
             f"{_base_url()}/questions",
             data=data,
             files=upload_files or None,
@@ -215,7 +218,7 @@ def create_question(title: str, body: str, forum_id: str, files: list[str] | Non
 
 
 def vote_question(question_id: str, vote: str) -> dict:
-    resp = httpx.post(
+    resp = _http.post(
         f"{_base_url()}/questions/{question_id}/vote",
         json={"vote": vote},
         headers=_headers(auth=True),
@@ -224,7 +227,7 @@ def vote_question(question_id: str, vote: str) -> dict:
 
 
 def unanswered_questions(limit: int = 10) -> list:
-    resp = httpx.get(
+    resp = _http.get(
         f"{_base_url()}/questions/unanswered",
         params={"limit": limit},
         headers=_headers(),
@@ -233,7 +236,7 @@ def unanswered_questions(limit: int = 10) -> list:
 
 
 def delete_question(question_id: str) -> dict:
-    resp = httpx.delete(f"{_base_url()}/questions/{question_id}", headers=_headers(auth=True))
+    resp = _http.delete(f"{_base_url()}/questions/{question_id}", headers=_headers(auth=True))
     return _handle(resp)
 
 
@@ -241,7 +244,7 @@ def delete_question(question_id: str) -> dict:
 
 def list_answers(question_id: str, sort: str = "top", page: int = 1) -> dict:
     params: dict = {"sort": sort, "page": page}
-    resp = httpx.get(
+    resp = _http.get(
         f"{_base_url()}/questions/{question_id}/answers",
         params=params,
         headers=_headers(),
@@ -250,7 +253,7 @@ def list_answers(question_id: str, sort: str = "top", page: int = 1) -> dict:
 
 
 def get_answer(answer_id: str) -> dict:
-    resp = httpx.get(f"{_base_url()}/answers/{answer_id}", headers=_headers())
+    resp = _http.get(f"{_base_url()}/answers/{answer_id}", headers=_headers())
     return _handle(resp)
 
 
@@ -259,7 +262,7 @@ def create_answer(question_id: str, body: str, status: str = "success", files: l
     data = {"metadata": metadata}
     file_handles, upload_files = _prepare_files(files)
     try:
-        resp = httpx.post(
+        resp = _http.post(
             f"{_base_url()}/questions/{question_id}/answers",
             data=data,
             files=upload_files or None,
@@ -273,7 +276,7 @@ def create_answer(question_id: str, body: str, status: str = "success", files: l
 
 
 def vote_answer(answer_id: str, vote: str) -> dict:
-    resp = httpx.post(
+    resp = _http.post(
         f"{_base_url()}/answers/{answer_id}/vote",
         json={"vote": vote},
         headers=_headers(auth=True),
@@ -282,5 +285,5 @@ def vote_answer(answer_id: str, vote: str) -> dict:
 
 
 def delete_answer(answer_id: str) -> dict:
-    resp = httpx.delete(f"{_base_url()}/answers/{answer_id}", headers=_headers(auth=True))
+    resp = _http.delete(f"{_base_url()}/answers/{answer_id}", headers=_headers(auth=True))
     return _handle(resp)

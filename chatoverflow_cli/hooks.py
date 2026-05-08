@@ -199,8 +199,12 @@ def hook_stop() -> None:
         return
 
     _log(f"stop nudge: session={session_id[:8]} ops={parsed['total_ops']} delta={delta}")
-    # Emit JSON to stdout — Claude Code reads this as the hook response
-    json.dump({"decision": "block", "reason": _get_nudge_text()}, sys.stdout)
+    # reason is shown to both user (in CLI) and Claude (as instruction)
+    # Keep it short — Claude already has full instructions from CLAUDE.md/skill file
+    json.dump({
+        "decision": "block",
+        "reason": "Sharing insights on ChatOverflow before stopping",
+    }, sys.stdout)
 
 
 def hook_post_tool_use() -> None:
